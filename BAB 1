@@ -1,0 +1,171 @@
+// Enum untuk Role pengguna
+enum Role { Admin, Customer }
+
+// Kelas dasar untuk Product
+class Product {
+  String productName;
+  double price;
+  bool inStock;
+
+  Product({
+    required this.productName,
+    required this.price,
+    this.inStock = true,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Product &&
+          runtimeType == other.runtimeType &&
+          productName == other.productName;
+
+  @override
+  int get hashCode => productName.hashCode;
+}
+
+// Kelas Exception kustom
+class ProductNotAvailableException implements Exception {
+  String message;
+  ProductNotAvailableException(this.message);
+}
+
+// Kelas dasar User
+abstract class User {
+  String name;
+  int age;
+  late Set<Product> products;
+  Role? role;
+
+  User({
+    required this.name,
+    required this.age,
+  }) {
+    products = {};
+  }
+
+  // Method abstrak yang akan diimplementasikan di kelas turunan
+  void viewProducts();
+}
+
+// Kelas AdminUser yang mewarisi User
+class AdminUser extends User {
+  AdminUser({
+    required String name,
+    required int age,
+  }) : super(name: name, age: age) {
+    role = Role.Admin;
+  }
+
+  // Method untuk menambah produk
+  void addProduct(Product product) {
+    if (!product.inStock) {
+      throw ProductNotAvailableException(
+          'Product ${product.productName} is out of stock!');
+    }
+    products.add(product);
+  }
+
+  // Method untuk menghapus produk
+  void removeProduct(Product product) {
+    products.remove(product);
+  }
+
+  @override
+  void viewProducts() {
+    print('\nAdmin $name\'s Products:');
+    if (products.isEmpty) {
+      print('No products available.');
+      return;
+    }
+    for (var product in products) {
+      print(
+          '- ${product.productName}: \$${product.price} (${product.inStock ? "In Stock" : "Out of Stock"})');
+    }
+  }
+}
+
+// Kelas CustomerUser yang mewarisi User
+class CustomerUser extends User {
+  CustomerUser({
+    required String name,
+    required int age,
+  }) : super(name: name, age: age) {
+    role = Role.Customer;
+  }
+
+  @override
+  void viewProducts() {
+    print('\nCustomer $name\'s Products:');
+    if (products.isEmpty) {
+      print('No products available.');
+      return;
+    }
+    for (var product in products) {
+      print(
+          '- ${product.productName}: \$${product.price} (${product.inStock ? "In Stock" : "Out of Stock"})');
+    }
+  }
+}
+
+// Kelas untuk mengelola produk global
+class ProductManager {
+  // Map untuk menyimpan daftar produk
+  static final Map<String, Product> _productCatalog = {};
+
+  // Method untuk menambah produk ke katalog
+  static void addToCatalog(Product product) {
+    _productCatalog[product.productName] = product;
+  }
+
+  // Method untuk mendapatkan produk dari katalog
+  static Product? getProduct(String productName) {
+    return _productCatalog[productName];
+  }
+
+  // Method asinkron untuk mensimulasikan pengambilan detail produk
+  static Future<Product?> fetchProductDetails(String productName) async {
+    await Future.delayed(Duration(seconds: 2)); // Simulasi network delay
+    return _productCatalog[productName];
+  }
+}
+
+// Contoh penggunaan
+void main() async {
+  // Membuat beberapa produk
+  var laptop = Product(productName: "Laptop", price: 1000.0);
+  var phone = Product(productName: "Phone", price: 500.0);
+  var tablet = Product(productName: "Tablet", price: 300.0, inStock: false);
+
+  // Menambahkan produk ke katalog
+  ProductManager.addToCatalog(laptop);
+  ProductManager.addToCatalog(phone);
+  ProductManager.addToCatalog(tablet);
+
+  // Membuat admin dan customer
+  var admin = AdminUser(name: "John Admin", age: 30);
+  var customer = CustomerUser(name: "Jane Customer", age: 25);
+
+  // Mendemonstrasikan exception handling
+  try {
+    admin.addProduct(laptop);
+    admin.addProduct(phone);
+    admin.addProduct(tablet); // Ini akan throw exception karena tidak in stock
+  } on ProductNotAvailableException catch (e) {
+    print('\nError: ${e.message}');
+  }
+
+  // Menampilkan produk admin
+  admin.viewProducts();
+
+  // Demonstrasi async operation
+  print('\nFetching product details...');
+  var fetchedProduct = await ProductManager.fetchProductDetails("Laptop");
+  if (fetchedProduct != null) {
+    print('Fetched product: ${fetchedProduct.productName} - \$${fetchedProduct.price}');
+  }
+
+  // Menambahkan produk ke customer
+  customer.products.add(phone);
+  customer.viewProducts();
+}
